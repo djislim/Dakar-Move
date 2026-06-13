@@ -15,9 +15,12 @@ const initBusSocket = require('./src/sockets/bus.socket');
 
 const app = express();
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] }
 });
+
+app.set('io', io);
 
 // Middlewares
 app.use(cors());
@@ -41,4 +44,4 @@ initBusSocket(io);
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚌 Dakar Move backend lancé sur le port ${PORT}`);
-}); 
+});
