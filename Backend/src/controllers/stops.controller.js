@@ -1,71 +1,33 @@
 const pool = require('../../config/db.config');
 
-exports.startTrip = async (req, res) => {
-  const { line_id } = req.body;
-  const driver_id = req.user.id;
-
+const getStopsByLine = async (req, res) => {
+  const { lineId } = req.params;
   try {
-    // Créer un nouveau voyage
     const result = await pool.query(
-      `INSERT INTO trips (driver_id, line_id, status, started_at)
-       VALUES ($1, $2, 'active', NOW())
-       RETURNING *`,
-      [driver_id, line_id]
+      'SELECT * FROM stops WHERE line_id = $1 ORDER BY stop_order ASC',
+      [lineId]
     );
-
-    res.json({
-      message: 'Voyage démarré — GPS actif',
-      trip: result.rows[0]
-    });
+    res.json(result.rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 
-exports.updateLocation = async (req, res) => {
-  const { trip_id, latitude, longitude } = req.body;
-  const driver_id = req.user.id;
-
+const getStopById = async (req, res) => {
+  const { id } = req.params;
   try {
-    // Sauvegarder la position
-    await pool.query(
-      `INSERT INTO bus_positions (trip_id, driver_id, latitude, longitude, recorded_at)
-       VALUES ($1, $2, $3, $4, NOW())`,
-      [trip_id, driver_id, latitude, longitude]
+    const result = await pool.query(
+      'SELECT * FROM stops WHERE id = $1', [id]
     );
-
-    // Émettre via WebSocket (disponible via req.app)
-    req.app.get('io').emit(`bus:${trip_id}`, {
-      trip_id,
-      latitude,
-      longitude,
-      timestamp: new Date()
-    });
-
-    res.json({ message: 'Position mise à jour' });
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Arrêt introuvable' });
+    }
+    res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
 
-exports.stopTrip = async (req, res) => {
-  const { trip_id } = req.body;
-
-  try {
-    await pool.query(
-      `UPDATE trips SET status = 'completed', ended_at = NOW()
-       WHERE id = $1`,
-      [trip_id]
-    );
-
-    // Notifier les passagers que le bus a terminé
-    req.app.get('io').emit(`bus:${trip_id}:ended`, { trip_id });
-
-    res.json({ message: 'Voyage terminé' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Erreur serveur' });
-  }
-};
+module.exports = { getStopsByLine, getStopById };
