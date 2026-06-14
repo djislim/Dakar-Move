@@ -105,3 +105,8 @@ INSERT INTO users (name, email, password, role, line_id) VALUES
 '$2a$10$rK8vJqZ5Y1mN3pX9wL2uOeHsT6cF4dR7gM0nI1bE5kA8jV3xP2qW', 
 'driver', 1)
 ON CONFLICT DO NOTHING;
+-- Mise à jour arrêts ligne 7 — vrais arrêts DDD
+DELETE FROM stops WHERE line_id = 1;
+INSERT INTO stops (line_id, name, latitude, longitude, stop_order) VALUES
+(1, 'Gare Ouakam', 14.7302, -17.4985, 1),
+(1, 'Gare Palais 2', 14.6937, -17.4441, 38);
