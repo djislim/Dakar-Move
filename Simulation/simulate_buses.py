@@ -1,57 +1,47 @@
 import time
-import math
 import random
 import requests
-import json
+import psycopg2
+import sys
 
 # ── Configuration ──────────────────────────────────────
 API_URL = "http://localhost:3000"
 DRIVER_EMAIL = "moussa@dakarmove.sn"
 DRIVER_PASSWORD = "postgres1"
-LINE_ID = 1
 INTERVAL = 5  # secondes entre chaque mise à jour GPS
 
-# ── Arrêts de la ligne 7 (Gare Palais → Ouakam) ───────
-STOPS = [
-    {"name": "Gare Ouakam",                         "lat": 14.7302, "lng": -17.4985},
-    {"name": "Poste courant cité Assemblée Ouakam",  "lat": 14.7289, "lng": -17.4967},
-    {"name": "Lycée Ouakam",                         "lat": 14.7275, "lng": -17.4952},
-    {"name": "Marché Jeudi",                         "lat": 14.7261, "lng": -17.4938},
-    {"name": "Arrêt station Shell Ouakam",           "lat": 14.7248, "lng": -17.4921},
-    {"name": "Ecole 6",                              "lat": 14.7234, "lng": -17.4905},
-    {"name": "Case des tous petits",                 "lat": 14.7219, "lng": -17.4889},
-    {"name": "Pharmacie Mame Seynabou Diagne",       "lat": 14.7205, "lng": -17.4873},
-    {"name": "Arrêt car rapide",                     "lat": 14.7191, "lng": -17.4857},
-    {"name": "Pharmacie cité Avion",                 "lat": 14.7178, "lng": -17.4841},
-    {"name": "Arret Terrain Foot",                   "lat": 14.7164, "lng": -17.4825},
-    {"name": "Yum Yum Ouakam",                       "lat": 14.7150, "lng": -17.4809},
-    {"name": "Sortie Ouakam",                        "lat": 14.7136, "lng": -17.4793},
-    {"name": "Ecole Stella Maris",                   "lat": 14.7112, "lng": -17.4768},
-    {"name": "Batrain",                              "lat": 14.7089, "lng": -17.4745},
-    {"name": "Mosquée Rawane MBaye",                 "lat": 14.7067, "lng": -17.4723},
-    {"name": "UVS Mermoz",                           "lat": 14.7045, "lng": -17.4701},
-    {"name": "Mermoz",                               "lat": 14.7023, "lng": -17.4679},
-    {"name": "Ambassade Niger",                      "lat": 14.7001, "lng": -17.4657},
-    {"name": "Fann",                                 "lat": 14.6978, "lng": -17.4634},
-    {"name": "UCAD 1",                               "lat": 14.6956, "lng": -17.4612},
-    {"name": "UCAD 2",                               "lat": 14.6934, "lng": -17.4589},
-    {"name": "Ecole Manguiers",                      "lat": 14.6912, "lng": -17.4567},
-    {"name": "Police 4e",                            "lat": 14.6889, "lng": -17.4545},
-    {"name": "Rue 31",                               "lat": 14.6867, "lng": -17.4523},
-    {"name": "Marché Tilene",                        "lat": 14.6845, "lng": -17.4501},
-    {"name": "Rue 11",                               "lat": 14.6823, "lng": -17.4478},
-    {"name": "Poste Medina",                         "lat": 14.6801, "lng": -17.4456},
-    {"name": "Crédit foncier Medina",                "lat": 14.6778, "lng": -17.4434},
-    {"name": "Sandaga",                              "lat": 14.6756, "lng": -17.4412},
-    {"name": "Peytavin",                             "lat": 14.6734, "lng": -17.4389},
-    {"name": "En face Bijouterie Yoro Lam Ponty",    "lat": 14.6712, "lng": -17.4367},
-    {"name": "Trésor Public",                        "lat": 14.6689, "lng": -17.4345},
-    {"name": "BiCIS place de l'indépendance",        "lat": 14.6928, "lng": -17.4467},
-    {"name": "Hôpital Principal",                    "lat": 14.6912, "lng": -17.4445},
-    {"name": "Assemblée nationale",                  "lat": 14.6901, "lng": -17.4423},
-    {"name": "Hopital Aristide Le Dantec",           "lat": 14.6889, "lng": -17.4401},
-    {"name": "Gare Palais 2",                        "lat": 14.6937, "lng": -17.4441},
-]
+DB_CONFIG = {
+    "host": "localhost",
+    "port": 5432,
+    "dbname": "dakarmove",
+    "user": "postgres",
+    "password": "postgres1"
+}
+
+def get_stops_for_line(line_id):
+    """Récupère les vrais arrêts d'une ligne depuis la base de données"""
+    conn = psycopg2.connect(**DB_CONFIG)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT name, latitude, longitude FROM stops WHERE line_id = %s ORDER BY stop_order ASC",
+        (line_id,)
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [{"name": r[0], "lat": float(r[1]), "lng": float(r[2])} for r in rows]
+
+def get_line_info(line_id):
+    """Récupère le nom de la ligne"""
+    conn = psycopg2.connect(**DB_CONFIG)
+    cur = conn.cursor()
+    cur.execute("SELECT number, name, origin, destination FROM lines WHERE id = %s", (line_id,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if row:
+        return {"number": row[0], "name": row[1], "origin": row[2], "destination": row[3]}
+    return None
 
 def interpolate(start, end, steps):
     """Génère des points GPS entre deux arrêts"""
@@ -60,7 +50,6 @@ def interpolate(start, end, steps):
         t = i / steps
         lat = start["lat"] + (end["lat"] - start["lat"]) * t
         lng = start["lng"] + (end["lng"] - start["lng"]) * t
-        # Légère variation pour simuler la route réelle
         lat += random.uniform(-0.0002, 0.0002)
         lng += random.uniform(-0.0002, 0.0002)
         points.append({"lat": lat, "lng": lng})
@@ -81,12 +70,12 @@ def login():
         print(f"❌ Erreur login : {data}")
         return None
 
-def start_trip(token):
+def start_trip(token, line_id):
     """Démarrer le voyage"""
     print("🚌 Démarrage du voyage...")
     response = requests.post(
         f"{API_URL}/driver/start",
-        json={"line_id": LINE_ID},
+        json={"line_id": line_id},
         headers={"Authorization": f"Bearer {token}"}
     )
     data = response.json()
@@ -115,11 +104,25 @@ def stop_trip(token, trip_id):
     )
     print("🏁 Voyage terminé !")
 
-def simulate():
-    """Simulation complète d'un bus sur la ligne 7"""
+def simulate(line_id=1):
+    """Simulation complète d'un bus sur une ligne donnée"""
     print("=" * 50)
-    print("🚌 DAKAR MOVE — Simulation GPS Bus Ligne 7")
+    print("🚌 DAKAR MOVE — Simulation GPS")
     print("=" * 50)
+
+    # Récupérer infos de la ligne et ses arrêts depuis la BDD
+    line_info = get_line_info(line_id)
+    if not line_info:
+        print(f"❌ Ligne {line_id} introuvable dans la base de données")
+        return
+
+    stops = get_stops_for_line(line_id)
+    if len(stops) < 2:
+        print(f"❌ Pas assez d'arrêts pour la ligne {line_id}")
+        return
+
+    print(f"📋 Ligne {line_info['number']} — {line_info['origin']} → {line_info['destination']}")
+    print(f"📍 {len(stops)} arrêts chargés depuis la base de données\n")
 
     # Login
     token = login()
@@ -127,25 +130,23 @@ def simulate():
         return
 
     # Démarrer le voyage
-    trip_id = start_trip(token)
+    trip_id = start_trip(token, line_id)
     if not trip_id:
         return
 
-    print(f"\n📍 Départ : {STOPS[0]['name']}")
-    print(f"🏁 Arrivée : {STOPS[-1]['name']}")
+    print(f"\n📍 Départ : {stops[0]['name']}")
+    print(f"🏁 Arrivée : {stops[-1]['name']}")
     print(f"⏱️  Mise à jour toutes les {INTERVAL} secondes\n")
 
     try:
-        # Parcourir chaque segment entre deux arrêts
-        for i in range(len(STOPS) - 1):
-            start = STOPS[i]
-            end = STOPS[i + 1]
+        for i in range(len(stops) - 1):
+            start = stops[i]
+            end = stops[i + 1]
 
             print(f"➡️  {start['name']} → {end['name']}")
 
-            # Simuler embouteillage aléatoire
-            steps = random.randint(5, 10)
-            delay = random.choice([0, 0, 0, 2, 5])  # 30% chance de retard
+            steps = random.randint(3, 6)
+            delay = random.choice([0, 0, 0, 2, 5])
             if delay > 0:
                 print(f"   ⚠️  Embouteillage détecté — retard {delay}s")
 
@@ -157,7 +158,7 @@ def simulate():
                 time.sleep(INTERVAL + delay)
 
             print(f"   🛑 Arrêt : {end['name']}\n")
-            time.sleep(3)  # Pause à l'arrêt
+            time.sleep(2)
 
     except KeyboardInterrupt:
         print("\n⚠️  Simulation arrêtée manuellement")
@@ -165,4 +166,6 @@ def simulate():
         stop_trip(token, trip_id)
 
 if __name__ == "__main__":
-    simulate()
+    # Permet de choisir la ligne en argument : py simulate_buses.py 1
+    line_id = int(sys.argv[1]) if len(sys.argv) > 1 else 1
+    simulate(line_id)
