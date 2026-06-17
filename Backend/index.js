@@ -9,6 +9,7 @@ const authRoutes = require('./src/routes/auth.routes');
 const linesRoutes = require('./src/routes/lines.routes');
 const stopsRoutes = require('./src/routes/stops.routes');
 const driverRoutes = require('./src/routes/driver.routes');
+const etaRoutes = require('./src/routes/eta.routes');
 
 // Import du socket
 const initBusSocket = require('./src/sockets/bus.socket');
@@ -31,6 +32,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/lines', linesRoutes);
 app.use('/api/stops', stopsRoutes);
 app.use('/driver', driverRoutes);
+app.use('/api/eta', etaRoutes);
 
 // Route test
 app.get('/', (req, res) => {
