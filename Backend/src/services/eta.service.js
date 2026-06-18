@@ -128,8 +128,89 @@ async function calculateETAForAllStops(tripId, lineId) {
   return results;
 }
 
+/**
+ * Calcule le retard d'un trip en comparant le temps écoulé
+ * avec le temps qu'il devrait avoir mis pour atteindre sa position actuelle
+ */
+async function detectDelay(tripId) {
+  const tripResult = await pool.query(
+    'SELECT started_at, line_id, expected_duration_minutes FROM trips WHERE id = $1',
+    [tripId]
+  );
+  const trip = tripResult.rows[0];
+  if (!trip) return null;
+
+  const lastPosition = await getLastPosition(tripId);
+  if (!lastPosition) return null;
+
+  // Temps réellement écoulé depuis le départ (en minutes)
+  const elapsedMinutes = (new Date(lastPosition.recorded_at) - new Date(trip.started_at)) / 60000;
+
+  // Récupérer tous les arrêts de la ligne
+  const stopsResult = await pool.query(
+    'SELECT id, latitude, longitude, stop_order FROM stops WHERE line_id = $1 ORDER BY stop_order ASC',
+    [trip.line_id]
+  );
+  const stops = stopsResult.rows;
+  if (stops.length < 2) return null;
+
+  // Trouver l'arrêt le plus proche de la position actuelle
+  let closestIndex = 0;
+  let closestDistance = Infinity;
+  stops.forEach((stop, index) => {
+    const dist = calculateDistance(
+      lastPosition.latitude, lastPosition.longitude,
+      stop.latitude, stop.longitude
+    );
+    if (dist < closestDistance) {
+      closestDistance = dist;
+      closestIndex = index;
+    }
+  });
+
+  // Progression théorique attendue (% du trajet selon le temps écoulé)
+  const expectedProgressPercent = Math.min(elapsedMinutes / trip.expected_duration_minutes, 1);
+  const expectedStopIndex = Math.floor(expectedProgressPercent * (stops.length - 1));
+
+  // Retard = écart entre l'arrêt où le bus DEVRAIT être et celui où il EST réellement
+  const stopsBehind = expectedStopIndex - closestIndex;
+  
+  // Convertir le retard en minutes approximatives (basé sur ~1 min par arrêt en moyenne)
+  const avgMinutesPerStop = trip.expected_duration_minutes / stops.length;
+  const delayMinutes = Math.max(0, Math.round(stopsBehind * avgMinutesPerStop));
+
+  return {
+    trip_id: tripId,
+    elapsed_minutes: Math.round(elapsedMinutes),
+    expected_duration_minutes: trip.expected_duration_minutes,
+    current_stop_index: closestIndex,
+    expected_stop_index: expectedStopIndex,
+    stops_behind: stopsBehind,
+    delay_minutes: delayMinutes,
+    is_delayed: delayMinutes >= 5,
+    current_stop_id: stops[closestIndex].id
+  };
+}
+
+/**
+ * Met à jour le retard en base de données pour un trip
+ */
+async function updateTripDelay(tripId) {
+  const delayInfo = await detectDelay(tripId);
+  if (!delayInfo) return null;
+
+  await pool.query(
+    'UPDATE trips SET delay_minutes = $1 WHERE id = $2',
+    [delayInfo.delay_minutes, tripId]
+  );
+
+  return delayInfo;
+}
+
 module.exports = {
   calculateDistance,
   calculateETA,
-  calculateETAForAllStops
+  calculateETAForAllStops,
+  detectDelay,
+  updateTripDelay
 };

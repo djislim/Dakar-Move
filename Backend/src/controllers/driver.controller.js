@@ -1,4 +1,5 @@
 const pool = require('../../config/db.config');
+const etaService = require('../services/eta.service');
 
 const startTrip = async (req, res) => {
   const { line_id } = req.body;
@@ -28,10 +29,30 @@ const updateLocation = async (req, res) => {
        VALUES ($1, $2, $3, $4, NOW())`,
       [trip_id, driver_id, latitude, longitude]
     );
+
+    // Détecter le retard à chaque mise à jour de position
+    const delayInfo = await etaService.updateTripDelay(trip_id);
+
     req.app.get('io').emit(`bus:${trip_id}`, {
-      trip_id, latitude, longitude, timestamp: new Date()
+      trip_id, latitude, longitude, timestamp: new Date(),
+      delay_minutes: delayInfo ? delayInfo.delay_minutes : 0,
+      is_delayed: delayInfo ? delayInfo.is_delayed : false
     });
-    res.json({ message: 'Position mise à jour' });
+
+    // Si retard détecté, déclencher une alerte
+    if (delayInfo && delayInfo.is_delayed) {
+      req.app.get('io').emit(`alert:trip:${trip_id}`, {
+        trip_id,
+        message: `Retard de ${delayInfo.delay_minutes} minutes détecté`,
+        delay_minutes: delayInfo.delay_minutes,
+        current_stop_id: delayInfo.current_stop_id
+      });
+    }
+
+    res.json({ 
+      message: 'Position mise à jour',
+      delay_info: delayInfo 
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Erreur serveur' });

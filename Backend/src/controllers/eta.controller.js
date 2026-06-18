@@ -57,5 +57,18 @@ const getActiveTripsForStop = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
+const getTripDelay = async (req, res) => {
+  const { tripId } = req.params;
+  try {
+    const delayInfo = await etaService.detectDelay(tripId);
+    if (!delayInfo) {
+      return res.status(404).json({ message: 'Trip introuvable ou pas de position GPS' });
+    }
+    res.json(delayInfo);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
 
-module.exports = { getETAForLine, getETAForStop, getActiveTripsForStop };
+module.exports = { getETAForLine, getETAForStop, getActiveTripsForStop, getTripDelay };

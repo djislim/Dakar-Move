@@ -10,5 +10,7 @@ router.get('/trip/:tripId/stop/:stopId', (req, res) => etaController.getETAForSt
 
 // ETA de tous les bus actifs arrivant à un arrêt donné
 router.get('/stop/:stopId/arrivals', (req, res) => etaController.getActiveTripsForStop(req, res));
+// Retard d'un trip actif
+router.get('/trip/:tripId/delay', (req, res) => etaController.getTripDelay(req, res));
 
 module.exports = router;
