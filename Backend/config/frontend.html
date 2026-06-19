@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dakar Move — Suivez votre bus, en direct</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --nuit: #1A1208;
+    --nuit-2: #241a0f;
+    --terracotta: #E8633A;
+    --terracotta-dim: #c5512e;
+    --sable: #F4C95D;
+    --palmier: #2D6A4F;
+    --creme: #FAF3E6;
+    --creme-dim: #d9cdb4;
+    --ombre: rgba(0,0,0,0.35);
+    --radius: 18px;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+
+  body{
+    background:var(--nuit);
+    color:var(--creme);
+    font-family:'Space Grotesk', sans-serif;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  h1,h2,h3,.display{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    letter-spacing:-0.01em;
+    line-height:1.05;
+  }
+
+  a{color:inherit;text-decoration:none;}
+
+  ::selection{background:var(--terracotta);color:var(--creme);}
+
+  /* ---------- Skip / focus ---------- */
+  :focus-visible{
+    outline:3px solid var(--sable);
+    outline-offset:3px;
+    border-radius:6px;
+  }
+
+  /* ---------- Texture de fond générale ---------- */
+  .grain{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    z-index:999;
+    opacity:0.05;
+    mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ---------- Nav ---------- */
+  header{
+    position:fixed;
+    top:0;left:0;right:0;
+    z-index:100;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:24px 6vw;
+    transition:background .3s ease, padding .3s ease, backdrop-filter .3s ease;
+  }
+  header.scrolled{
+    background:rgba(26,18,8,0.85);
+    backdrop-filter:blur(10px);
+    padding:14px 6vw;
+    border-bottom:1px solid rgba(244,243,234,0.08);
+  }
+  .logo{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size:1.3rem;
+    color:var(--creme);
+  }
+  .logo svg{width:30px;height:30px;flex-shrink:0;}
+  nav.links{
+    display:flex;
+    gap:36px;
+    font-size:0.95rem;
+    color:var(--creme-dim);
+  }
+  nav.links a{position:relative;transition:color .25s;}
+  nav.links a:hover{color:var(--sable);}
+  .nav-cta{
+    background:var(--terracotta);
+    color:var(--creme);
+    padding:11px 24px;
+    border-radius:100px;
+    font-weight:600;
+    font-size:0.92rem;
+    transition:transform .25s ease, background .25s ease;
+    border:none;
+    cursor:pointer;
+    font-family:'Space Grotesk', sans-serif;
+  }
+  .nav-cta:hover{background:var(--terracotta-dim);transform:translateY(-2px);}
+  .menu-toggle{display:none;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    padding:140px 6vw 80px;
+    background:
+      radial-gradient(ellipse 80% 60% at 70% 15%, rgba(232,99,58,0.18), transparent 60%),
+      linear-gradient(180deg, var(--nuit) 0%, #15100a 60%, #0e0a06 100%);
+    overflow:hidden;
+  }
+
+  .baobab-bg{
+    position:absolute;
+    bottom:-2%;
+    right:-4%;
+    width:min(58vw, 760px);
+    opacity:0.9;
+    z-index:0;
+    pointer-events:none;
+  }
+  .baobab-bg svg{width:100%;height:auto;display:block;}
+
+  .stars{
+    position:absolute;
+    inset:0;
+    z-index:0;
+    background-image:
+      radial-gradient(2px 2px at 15% 20%, rgba(244,243,234,0.5), transparent),
+      radial-gradient(2px 2px at 35% 8%, rgba(244,243,234,0.4), transparent),
+      radial-gradient(1.5px 1.5px at 55% 28%, rgba(244,243,234,0.35), transparent),
+      radial-gradient(2px 2px at 80% 12%, rgba(244,243,234,0.5), transparent),
+      radial-gradient(1.5px 1.5px at 92% 30%, rgba(244,243,234,0.3), transparent),
+      radial-gradient(1.5px 1.5px at 25% 45%, rgba(244,243,234,0.25), transparent);
+  }
+
+  .hero-grid{
+    position:relative;
+    z-index:2;
+    display:grid;
+    grid-template-columns:1.1fr 1fr;
+    gap:48px;
+    width:100%;
+    max-width:1280px;
+    margin:0 auto;
+    align-items:center;
+  }
+
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    font-size:0.82rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--sable);
+    margin-bottom:22px;
+    font-weight:600;
+  }
+  .eyebrow .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--terracotta);
+    box-shadow:0 0 0 0 rgba(232,99,58,0.6);
+    animation:pulse-dot 2s infinite;
+  }
+  @keyframes pulse-dot{
+    0%{box-shadow:0 0 0 0 rgba(232,99,58,0.55);}
+    70%{box-shadow:0 0 0 8px rgba(232,99,58,0);}
+    100%{box-shadow:0 0 0 0 rgba(232,99,58,0);}
+  }
+
+  .hero h1{
+    font-size:clamp(2.6rem, 5.2vw, 4.4rem);
+    color:var(--creme);
+    margin-bottom:24px;
+  }
+  .hero h1 em{
+    font-style:italic;
+    color:var(--terracotta);
+    font-weight:600;
+  }
+
+  .hero p.lead{
+    font-size:1.15rem;
+    color:var(--creme-dim);
+    max-width:480px;
+    line-height:1.65;
+    margin-bottom:38px;
+  }
+
+  .hero-actions{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:46px;}
+  .btn-primary{
+    background:var(--terracotta);
+    color:var(--creme);
+    padding:16px 30px;
+    border-radius:100px;
+    font-weight:600;
+    font-size:1rem;
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    transition:transform .25s ease, box-shadow .25s ease;
+    box-shadow:0 8px 24px rgba(232,99,58,0.25);
+  }
+  .btn-primary:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(232,99,58,0.35);}
+  .btn-secondary{
+    border:1.5px solid rgba(244,243,234,0.25);
+    color:var(--creme);
+    padding:16px 30px;
+    border-radius:100px;
+    font-weight:600;
+    font-size:1rem;
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    transition:border-color .25s ease, background .25s ease;
+  }
+  .btn-secondary:hover{border-color:var(--sable);background:rgba(244,201,93,0.06);}
+
+  .hero-stats{
+    display:flex;
+    gap:40px;
+    padding-top:32px;
+    border-top:1px solid rgba(244,243,234,0.12);
+  }
+  .hero-stats .stat-num{
+    font-family:'Fraunces', serif;
+    font-size:1.8rem;
+    font-weight:700;
+    color:var(--sable);
+    display:block;
+  }
+  .hero-stats .stat-label{
+    font-size:0.82rem;
+    color:var(--creme-dim);
+  }
+
+  /* ---------- Carte live (signature) ---------- */
+  .map-card{
+    position:relative;
+    background:linear-gradient(160deg, #20160c, #150f08);
+    border:1px solid rgba(244,243,234,0.1);
+    border-radius:24px;
+    padding:22px;
+    box-shadow:0 30px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(244,201,93,0.04) inset;
+  }
+  .map-card-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:14px;
+  }
+  .map-card-head .title{
+    font-size:0.92rem;
+    font-weight:600;
+    color:var(--creme);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .map-card-head .live-tag{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:0.74rem;
+    color:var(--terracotta);
+    font-weight:600;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+  }
+  .map-card-head .live-tag .dot{
+    width:7px;height:7px;border-radius:50%;background:var(--terracotta);
+    animation:pulse-dot 2s infinite;
+  }
+  .map-svg-wrap{
+    border-radius:16px;
+    overflow:hidden;
+    background:#17110a;
+    aspect-ratio:4/3.1;
+  }
+  .map-svg-wrap svg{width:100%;height:100%;display:block;}
+
+  .map-legend{
+    display:flex;
+    gap:18px;
+    margin-top:14px;
+    font-size:0.78rem;
+    color:var(--creme-dim);
+    flex-wrap:wrap;
+  }
+  .map-legend span{display:flex;align-items:center;gap:6px;}
+  .legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+
+  /* ---------- Bandeau marquee arrêts ---------- */
+  .stops-marquee{
+    background:var(--terracotta);
+    color:var(--nuit);
+    padding:14px 0;
+    overflow:hidden;
+    position:relative;
+    border-top:1px solid rgba(0,0,0,0.1);
+    border-bottom:1px solid rgba(0,0,0,0.1);
+  }
+  .marquee-track{
+    display:flex;
+    gap:48px;
+    white-space:nowrap;
+    animation:scrollLeft 32s linear infinite;
+    width:max-content;
+  }
+  .marquee-track span{
+    font-weight:600;
+    font-size:0.95rem;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .marquee-track span::before{content:"●";font-size:0.6rem;opacity:0.5;}
+  @keyframes scrollLeft{
+    from{transform:translateX(0);}
+    to{transform:translateX(-50%);}
+  }
+
+  /* ---------- Sections génériques ---------- */
+  section{
+    padding:120px 6vw;
+    position:relative;
+  }
+  .section-inner{max-width:1180px;margin:0 auto;}
+
+  .section-head{
+    max-width:640px;
+    margin-bottom:64px;
+  }
+  .section-head .tag{
+    color:var(--terracotta);
+    font-weight:600;
+    font-size:0.85rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    margin-bottom:14px;
+    display:block;
+  }
+  .section-head h2{
+    font-size:clamp(2rem, 3.4vw, 2.9rem);
+    color:var(--creme);
+    margin-bottom:18px;
+  }
+  .section-head p{
+    color:var(--creme-dim);
+    font-size:1.08rem;
+    line-height:1.7;
+  }
+
+  /* ---------- Fonctionnalités ---------- */
+  .features{background:#171008;}
+  .feature-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:28px;
+  }
+  .feature-card{
+    background:linear-gradient(160deg, rgba(244,243,234,0.04), rgba(244,243,234,0.01));
+    border:1px solid rgba(244,243,234,0.08);
+    border-radius:var(--radius);
+    padding:36px 30px;
+    transition:transform .3s ease, border-color .3s ease, background .3s ease;
+  }
+  .feature-card:hover{
+    transform:translateY(-6px);
+    border-color:rgba(232,99,58,0.35);
+    background:linear-gradient(160deg, rgba(232,99,58,0.08), rgba(244,243,234,0.02));
+  }
+  .feature-icon{
+    width:52px;height:52px;
+    border-radius:14px;
+    background:rgba(232,99,58,0.14);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:22px;
+  }
+  .feature-icon svg{width:26px;height:26px;}
+  .feature-card h3{
+    font-size:1.25rem;
+    color:var(--creme);
+    margin-bottom:10px;
+    font-weight:600;
+  }
+  .feature-card p{
+    color:var(--creme-dim);
+    font-size:0.96rem;
+    line-height:1.6;
+  }
+
+  /* ---------- Itinéraire / lignes ---------- */
+  .route-section{
+    background:linear-gradient(180deg, #171008, #1a1208);
+  }
+  .route-flow{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    position:relative;
+    margin-top:20px;
+    gap:8px;
+  }
+  .route-line{
+    position:absolute;
+    top:23px;
+    left:5%;
+    right:5%;
+    height:2px;
+    background:repeating-linear-gradient(90deg, var(--terracotta) 0 10px, transparent 10px 18px);
+    z-index:0;
+  }
+  .route-step{
+    position:relative;
+    z-index:1;
+    flex:1;
+    text-align:center;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .route-pin{
+    width:46px;height:46px;
+    border-radius:50%;
+    background:var(--nuit-2);
+    border:2px solid var(--sable);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:18px;
+    transition:transform .3s ease, border-color .3s ease;
+  }
+  .route-step:hover .route-pin{transform:scale(1.1);border-color:var(--terracotta);}
+  .route-pin svg{width:20px;height:20px;}
+  .route-step h4{
+    font-family:'Fraunces', serif;
+    font-size:1.05rem;
+    color:var(--creme);
+    margin-bottom:6px;
+    font-weight:600;
+  }
+  .route-step p{
+    font-size:0.85rem;
+    color:var(--creme-dim);
+    max-width:150px;
+    line-height:1.5;
+  }
+
+  /* ---------- App preview / phone mockup ---------- */
+  .preview-section{
+    background:#0e0a06;
+    overflow:hidden;
+  }
+  .preview-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:60px;
+    align-items:center;
+  }
+  .phone-frame{
+    position:relative;
+    width:280px;
+    margin:0 auto;
+    border-radius:38px;
+    background:#0b0805;
+    border:6px solid #2a1f12;
+    box-shadow:0 40px 80px rgba(0,0,0,0.55);
+    padding:14px;
+  }
+  .phone-screen{
+    background:linear-gradient(180deg, #1a1208, #100b06);
+    border-radius:26px;
+    overflow:hidden;
+    aspect-ratio:9/19.5;
+    position:relative;
+    padding:18px 16px;
+    display:flex;
+    flex-direction:column;
+  }
+  .phone-screen .ps-top{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:0.7rem;color:var(--creme-dim);margin-bottom:14px;
+  }
+  .phone-screen .ps-card{
+    background:rgba(244,243,234,0.05);
+    border:1px solid rgba(244,243,234,0.08);
+    border-radius:14px;
+    padding:12px;
+    margin-bottom:10px;
+  }
+  .phone-screen .ps-card .row{display:flex;justify-content:space-between;align-items:center;}
+  .phone-screen .ps-card .name{font-size:0.82rem;color:var(--creme);font-weight:600;}
+  .phone-screen .ps-card .eta{font-size:0.78rem;color:var(--sable);font-weight:700;}
+  .phone-screen .ps-card .sub{font-size:0.7rem;color:var(--creme-dim);margin-top:4px;}
+  .phone-map{
+    flex:1;
+    border-radius:14px;
+    background:#17110a;
+    margin-top:6px;
+    position:relative;
+    overflow:hidden;
+  }
+  .phone-map svg{width:100%;height:100%;}
+
+  .preview-copy .section-head{margin-bottom:36px;}
+  .preview-list{display:flex;flex-direction:column;gap:22px;}
+  .preview-item{display:flex;gap:16px;align-items:flex-start;}
+  .preview-item .num{
+    font-family:'Fraunces', serif;
+    color:var(--terracotta);
+    font-weight:700;
+    font-size:1.1rem;
+    flex-shrink:0;
+  }
+  .preview-item h4{color:var(--creme);font-size:1.05rem;margin-bottom:4px;font-weight:600;}
+  .preview-item p{color:var(--creme-dim);font-size:0.92rem;line-height:1.6;}
+
+  /* ---------- Témoignages ---------- */
+  .testimonials{background:#171008;}
+  .testi-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:26px;
+  }
+  .testi-card{
+    background:rgba(244,243,234,0.03);
+    border:1px solid rgba(244,243,234,0.07);
+    border-radius:var(--radius);
+    padding:30px;
+  }
+  .testi-stars{color:var(--sable);font-size:0.95rem;margin-bottom:16px;letter-spacing:2px;}
+  .testi-card p.quote{
+    color:var(--creme-dim);
+    font-size:0.96rem;
+    line-height:1.65;
+    margin-bottom:20px;
+  }
+  .testi-author{display:flex;align-items:center;gap:12px;}
+  .testi-avatar{
+    width:42px;height:42px;border-radius:50%;
+    background:linear-gradient(140deg, var(--terracotta), var(--sable));
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Fraunces', serif;font-weight:700;color:var(--nuit);
+  }
+  .testi-author .name{color:var(--creme);font-size:0.9rem;font-weight:600;}
+  .testi-author .role{color:var(--creme-dim);font-size:0.78rem;}
+
+  /* ---------- CTA final ---------- */
+  .cta-final{
+    background:linear-gradient(160deg, #20160c 0%, var(--nuit) 60%);
+    position:relative;
+    overflow:hidden;
+  }
+  .cta-final::before{
+    content:"";
+    position:absolute;
+    width:600px;height:600px;
+    background:radial-gradient(circle, rgba(232,99,58,0.16), transparent 70%);
+    top:-200px;right:-200px;
+  }
+  .cta-box{
+    position:relative;
+    z-index:1;
+    text-align:center;
+    max-width:680px;
+    margin:0 auto;
+  }
+  .cta-box h2{
+    font-size:clamp(2.2rem, 4vw, 3.4rem);
+    color:var(--creme);
+    margin-bottom:20px;
+  }
+  .cta-box p{
+    color:var(--creme-dim);
+    font-size:1.1rem;
+    margin-bottom:40px;
+    line-height:1.6;
+  }
+  .store-buttons{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
+  .store-btn{
+    display:flex;align-items:center;gap:12px;
+    background:var(--creme);
+    color:var(--nuit);
+    padding:13px 24px;
+    border-radius:14px;
+    font-weight:600;
+    transition:transform .25s ease;
+  }
+  .store-btn:hover{transform:translateY(-3px);}
+  .store-btn svg{width:24px;height:24px;}
+  .store-btn .store-text{display:flex;flex-direction:column;line-height:1.2;}
+  .store-btn .store-text small{font-size:0.65rem;font-weight:500;opacity:0.7;}
+  .store-btn .store-text span{font-size:0.95rem;font-family:'Fraunces', serif;font-weight:700;}
+
+  /* ---------- Footer ---------- */
+  footer{
+    background:#100b06;
+    padding:60px 6vw 30px;
+    border-top:1px solid rgba(244,243,234,0.06);
+  }
+  .footer-grid{
+    display:grid;
+    grid-template-columns:1.4fr 1fr 1fr 1fr;
+    gap:40px;
+    max-width:1180px;
+    margin:0 auto 40px;
+  }
+  .footer-brand .logo{margin-bottom:14px;}
+  .footer-brand p{color:var(--creme-dim);font-size:0.9rem;line-height:1.6;max-width:280px;}
+  .footer-col h5{
+    color:var(--creme);
+    font-size:0.85rem;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    margin-bottom:18px;
+    font-weight:600;
+  }
+  .footer-col a{
+    display:block;
+    color:var(--creme-dim);
+    font-size:0.9rem;
+    margin-bottom:12px;
+    transition:color .2s;
+  }
+  .footer-col a:hover{color:var(--sable);}
+  .footer-bottom{
+    max-width:1180px;
+    margin:0 auto;
+    padding-top:24px;
+    border-top:1px solid rgba(244,243,234,0.06);
+    display:flex;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+    font-size:0.82rem;
+    color:var(--creme-dim);
+  }
+
+  /* ---------- Reveal on scroll ---------- */
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .8s ease, transform .8s ease;}
+  .reveal.in{opacity:1;transform:translateY(0);}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+    .reveal{opacity:1;transform:none;}
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 980px){
+    .hero-grid{grid-template-columns:1fr;}
+    .map-card{max-width:520px;margin:0 auto;}
+    .feature-grid{grid-template-columns:1fr 1fr;}
+    .testi-grid{grid-template-columns:1fr;}
+    .preview-grid{grid-template-columns:1fr;}
+    .footer-grid{grid-template-columns:1fr 1fr;}
+  }
+  @media (max-width: 700px){
+    nav.links{display:none;}
+    .feature-grid{grid-template-columns:1fr;}
+    .route-flow{flex-wrap:wrap;}
+    .route-line{display:none;}
+    .footer-grid{grid-template-columns:1fr;}
+    .hero-stats{gap:24px;flex-wrap:wrap;}
+    section{padding:80px 6vw;}
+    .baobab-bg{opacity:0.4;width:80vw;}
+  }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<header id="siteHeader">
+  <div class="logo">
+    <svg viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="15" stroke="#E8633A" stroke-width="2"/>
+      <path d="M9 20 L13 11 L16 17 L19 9 L23 20" stroke="#F4C95D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </svg>
+    Dakar Move
+  </div>
+  <nav class="links">
+    <a href="#carte">Carte en direct</a>
+    <a href="#fonctionnalites">Fonctionnalités</a>
+    <a href="#lignes">Itinéraires</a>
+    <a href="#avis">Avis</a>
+  </nav>
+  <button class="nav-cta">Télécharger l'appli</button>
+</header>
+
+<!-- HERO -->
+<section class="hero" id="carte">
+  <div class="stars"></div>
+  <div class="baobab-bg">
+    <svg viewBox="0 0 500 600" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="250" cy="220" rx="150" ry="120" fill="#2D6A4F" opacity="0.18"/>
+      <path d="M250 600 L250 280" stroke="#1c140b" stroke-width="46" stroke-linecap="round"/>
+      <path d="M250 320 C200 300 160 260 150 200" stroke="#1c140b" stroke-width="22" stroke-linecap="round" fill="none"/>
+      <path d="M250 300 C300 280 340 240 350 190" stroke="#1c140b" stroke-width="22" stroke-linecap="round" fill="none"/>
+      <path d="M250 280 C260 240 260 200 240 160" stroke="#1c140b" stroke-width="18" stroke-linecap="round" fill="none"/>
+      <path d="M150 200 C130 180 120 150 125 120" stroke="#1c140b" stroke-width="12" stroke-linecap="round" fill="none"/>
+      <path d="M350 190 C375 170 390 145 388 115" stroke="#1c140b" stroke-width="12" stroke-linecap="round" fill="none"/>
+      <path d="M240 160 C235 130 245 100 270 80" stroke="#1c140b" stroke-width="10" stroke-linecap="round" fill="none"/>
+      <ellipse cx="250" cy="600" rx="80" ry="14" fill="#000" opacity="0.25"/>
+    </svg>
+  </div>
+
+  <div class="hero-grid">
+    <div class="hero-copy">
+      <div class="eyebrow"><span class="dot"></span> Suivi en temps réel · Dakar Dem Dikk</div>
+      <h1 class="reveal">Votre bus arrive.<br><em>Vous le voyez venir.</em></h1>
+      <p class="lead reveal">Dakar Move affiche la position de chaque bus en mouvement sur une carte vivante de la ville, pour que l'attente à l'arrêt devienne une simple formalité.</p>
+      <div class="hero-actions reveal">
+        <a href="#" class="btn-primary">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 19h20L12 2z" fill="#FAF3E6" opacity="0"/><path d="M17.5 2.5h-11A2.5 2.5 0 0 0 4 5v14a2.5 2.5 0 0 0 2.5 2.5h11A2.5 2.5 0 0 0 20 19V5a2.5 2.5 0 0 0-2.5-2.5z" stroke="#FAF3E6" stroke-width="1.6" fill="none"/><path d="M11 18h2" stroke="#FAF3E6" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Télécharger l'appli
+        </a>
+        <a href="#carte-live" class="btn-secondary">
+          Voir la carte en direct
+        </a>
+      </div>
+      <div class="hero-stats reveal">
+        <div>
+          <span class="stat-num">24/7</span>
+          <span class="stat-label">Position des bus actualisée</span>
+        </div>
+        <div>
+          <span class="stat-num">+180</span>
+          <span class="stat-label">Arrêts couverts à Dakar</span>
+        </div>
+        <div>
+          <span class="stat-num">100%</span>
+          <span class="stat-label">Gratuit pour les voyageurs</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="map-card reveal" id="carte-live">
+      <div class="map-card-head">
+        <div class="title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" stroke="#F4C95D" stroke-width="1.6" fill="none"/><circle cx="12" cy="9" r="2.2" stroke="#F4C95D" stroke-width="1.4"/></svg>
+          Centre-ville, Dakar
+        </div>
+        <div class="live-tag"><span class="dot"></span> En direct</div>
+      </div>
+      <div class="map-svg-wrap">
+        <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" id="liveMap">
+          <defs>
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#2a2014" stroke-width="0.6"/>
+            </pattern>
+          </defs>
+          <rect width="400" height="300" fill="#17110a"/>
+          <rect width="400" height="300" fill="url(#grid)"/>
+
+          <!-- routes -->
+          <path id="routeA" d="M20 230 C90 230 110 150 180 150 S 280 70 380 70" fill="none" stroke="#3a2c18" stroke-width="5" stroke-linecap="round"/>
+          <path id="routeB" d="M30 40 C100 60 140 120 210 130 S 320 190 390 250" fill="none" stroke="#3a2c18" stroke-width="5" stroke-linecap="round"/>
+          <path id="routeC" d="M40 280 C120 260 180 240 220 190 S 330 110 370 30" fill="none" stroke="#3a2c18" stroke-width="5" stroke-linecap="round"/>
+
+          <!-- arrets -->
+          <g fill="#F4C95D">
+            <circle cx="20" cy="230" r="4.5"/>
+            <circle cx="180" cy="150" r="4.5"/>
+            <circle cx="380" cy="70" r="4.5"/>
+            <circle cx="30" cy="40" r="4.5"/>
+            <circle cx="210" cy="130" r="4.5"/>
+            <circle cx="390" cy="250" r="4.5"/>
+            <circle cx="40" cy="280" r="4.5"/>
+            <circle cx="220" cy="190" r="4.5"/>
+            <circle cx="370" cy="30" r="4.5"/>
+          </g>
+
+          <!-- bus animes -->
+          <circle r="6" fill="#E8633A">
+            <animateMotion dur="7s" repeatCount="indefinite" rotate="auto">
+              <mpath href="#routeA"/>
+            </animateMotion>
+          </circle>
+          <circle r="6" fill="#E8633A">
+            <animateMotion dur="9s" repeatCount="indefinite" rotate="auto" begin="1.5s">
+              <mpath href="#routeB"/>
+            </animateMotion>
+          </circle>
+          <circle r="6" fill="#E8633A">
+            <animateMotion dur="6s" repeatCount="indefinite" rotate="auto" begin="0.8s">
+              <mpath href="#routeC"/>
+            </animateMotion>
+          </circle>
+          <circle r="6" fill="#E8633A">
+            <animateMotion dur="8s" repeatCount="indefinite" rotate="auto" begin="3s">
+              <mpath href="#routeA"/>
+            </animateMotion>
+          </circle>
+        </svg>
+      </div>
+      <div class="map-legend">
+        <span><span class="legend-dot" style="background:#E8633A;"></span> Bus en circulation</span>
+        <span><span class="legend-dot" style="background:#F4C95D;"></span> Arrêt Dem Dikk</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE ARRETS -->
+<div class="stops-marquee">
+  <div class="marquee-track">
+    <span>Petersen</span><span>Place de l'Indépendance</span><span>HLM</span><span>Liberté 6</span><span>Pikine</span><span>Grand Yoff</span><span>Médina</span><span>Colobane</span><span>Ouakam</span>
+    <span>Petersen</span><span>Place de l'Indépendance</span><span>HLM</span><span>Liberté 6</span><span>Pikine</span><span>Grand Yoff</span><span>Médina</span><span>Colobane</span><span>Ouakam</span>
+  </div>
+</div>
+
+<!-- FONCTIONNALITES -->
+<section class="features" id="fonctionnalites">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="tag">Pourquoi Dakar Move</span>
+      <h2>Voyagez sans attendre à l'aveugle</h2>
+      <p>Conçue pour les réalités du terrain à Dakar, l'application transforme chaque trajet en Dem Dikk en une expérience prévisible et sereine.</p>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" stroke="#E8633A" stroke-width="1.8" fill="none"/><circle cx="12" cy="9" r="2.4" stroke="#E8633A" stroke-width="1.6"/></svg>
+        </div>
+        <h3>Localisation en direct</h3>
+        <p>Chaque bus apparaît en mouvement sur la carte, avec sa position actualisée en continu pendant tout son trajet.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#E8633A" stroke-width="1.8"/><path d="M12 7v5l3 3" stroke="#E8633A" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Temps d'attente estimé</h3>
+        <p>Sachez combien de minutes il reste avant que votre bus n'atteigne votre arrêt, et organisez votre sortie en conséquence.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 17h16M4 17a2 2 0 0 1-2-2v-2.5a1 1 0 0 1 .26-.67l2.1-2.3A2 2 0 0 1 5.85 9h12.3a2 2 0 0 1 1.49.83l2.1 2.3a1 1 0 0 1 .26.67V15a2 2 0 0 1-2 2" stroke="#E8633A" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="17" r="1.6" stroke="#E8633A" stroke-width="1.5"/><circle cx="17" cy="17" r="1.6" stroke="#E8633A" stroke-width="1.5"/></svg>
+        </div>
+        <h3>Tous les arrêts du réseau</h3>
+        <p>Retrouvez les arrêts Dem Dikk de votre quartier, classés par zone, pour planifier vos déplacements à Dakar et sa périphérie.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M3 11l18-7-7 18-3-7-8-4z" stroke="#E8633A" stroke-width="1.7" stroke-linejoin="round" fill="none"/></svg>
+        </div>
+        <h3>Itinéraires conseillés</h3>
+        <p>Indiquez votre point de départ et votre destination : Dakar Move propose le trajet en bus le plus direct.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9z" stroke="#E8633A" stroke-width="1.7" stroke-linejoin="round" fill="none"/><path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="#E8633A" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Alertes d'arrivée</h3>
+        <p>Recevez une notification quelques minutes avant que le bus n'arrive à votre arrêt, pour ne plus jamais courir après lui.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="9" rx="2" stroke="#E8633A" stroke-width="1.7"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#E8633A" stroke-width="1.7"/></svg>
+        </div>
+        <h3>Fonctionne hors connexion stable</h3>
+        <p>Pensée pour le réseau mobile sénégalais : l'appli reste légère et réactive, même en cas de connexion limitée.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ITINERAIRE / LIGNES -->
+<section class="route-section" id="lignes">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="tag">Comment ça marche</span>
+      <h2>De l'arrêt à la destination, en trois regards</h2>
+      <p>Pas besoin de connaître un numéro de ligne par cœur : ouvrez l'appli, repérez votre arrêt, et suivez le bus jusqu'à vous.</p>
+    </div>
+
+    <div class="route-flow reveal">
+      <div class="route-line"></div>
+      <div class="route-step">
+        <div class="route-pin">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z" stroke="#F4C95D" stroke-width="1.6"/></svg>
+        </div>
+        <h4>Repérez votre arrêt</h4>
+        <p>Localisez l'arrêt Dem Dikk le plus proche sur la carte du quartier.</p>
+      </div>
+      <div class="route-step">
+        <div class="route-pin">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" fill="#F4C95D"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4" stroke="#F4C95D" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <h4>Suivez le bus</h4>
+        <p>Regardez-le se rapprocher en direct, comme un petit point rouge qui avance sur la carte.</p>
+      </div>
+      <div class="route-step">
+        <div class="route-pin">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="#F4C95D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h4>Montez sereinement</h4>
+        <p>Sortez au bon moment, sans attente inutile sous le soleil de Dakar.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PREVIEW APPLI -->
+<section class="preview-section">
+  <div class="section-inner preview-grid">
+    <div class="phone-mock reveal">
+      <div class="phone-frame">
+        <div class="phone-screen">
+          <div class="ps-top">
+            <span>9:41</span>
+            <span>Dakar Move</span>
+          </div>
+          <div class="ps-card">
+            <div class="row">
+              <span class="name">Arrêt Petersen</span>
+              <span class="eta">4 min</span>
+            </div>
+            <div class="sub">Bus en approche depuis Colobane</div>
+          </div>
+          <div class="ps-card">
+            <div class="row">
+              <span class="name">Arrêt HLM</span>
+              <span class="eta">11 min</span>
+            </div>
+            <div class="sub">Bus en approche depuis Grand Yoff</div>
+          </div>
+          <div class="phone-map">
+            <svg viewBox="0 0 200 220" xmlns="http://www.w3.org/2000/svg">
+              <rect width="200" height="220" fill="#17110a"/>
+              <path id="pRoute" d="M10 200 C60 190 80 140 120 120 S 170 60 190 20" fill="none" stroke="#3a2c18" stroke-width="4" stroke-linecap="round"/>
+              <circle cx="10" cy="200" r="3.5" fill="#F4C95D"/>
+              <circle cx="120" cy="120" r="3.5" fill="#F4C95D"/>
+              <circle cx="190" cy="20" r="3.5" fill="#F4C95D"/>
+              <circle r="5" fill="#E8633A">
+                <animateMotion dur="5s" repeatCount="indefinite" rotate="auto">
+                  <mpath href="#pRoute"/>
+                </animateMotion>
+              </circle>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-copy">
+      <div class="section-head">
+        <span class="tag">L'appli au quotidien</span>
+        <h2>Toute la ville de Dakar, dans votre poche</h2>
+        <p>Une interface simple, pensée pour un usage rapide à l'arrêt de bus, même en plein soleil.</p>
+      </div>
+      <div class="preview-list">
+        <div class="preview-item reveal">
+          <span class="num">①</span>
+          <div>
+            <h4>Ouvrez l'appli à l'arrêt</h4>
+            <p>Dakar Move détecte automatiquement l'arrêt le plus proche de vous.</p>
+          </div>
+        </div>
+        <div class="preview-item reveal">
+          <span class="num">②</span>
+          <div>
+            <h4>Visualisez les bus qui arrivent</h4>
+            <p>Chaque bus en approche s'affiche avec son temps d'arrivée estimé.</p>
+          </div>
+        </div>
+        <div class="preview-item reveal">
+          <span class="num">③</span>
+          <div>
+            <h4>Partez au bon moment</h4>
+            <p>Quittez la maison ou le bureau juste à temps pour ne rien perdre.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TEMOIGNAGES -->
+<section class="testimonials" id="avis">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <span class="tag">Ils l'utilisent déjà</span>
+      <h2>Les voyageurs de Dakar en parlent</h2>
+    </div>
+
+    <div class="testi-grid">
+      <div class="testi-card reveal">
+        <div class="testi-stars">★★★★★</div>
+        <p class="quote">Je ne reste plus debout sous le soleil à attendre sans savoir. Je vois le bus arriver et je sors juste à temps.</p>
+        <div class="testi-author">
+          <div class="testi-avatar">A</div>
+          <div>
+            <div class="name">Aïssatou D.</div>
+            <div class="role">Liberté 6, Dakar</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card reveal">
+        <div class="testi-stars">★★★★★</div>
+        <p class="quote">Très utile pour mes trajets vers le bureau. La carte est claire et se met à jour vite.</p>
+        <div class="testi-author">
+          <div class="testi-avatar">M</div>
+          <div>
+            <div class="name">Moussa K.</div>
+            <div class="role">Grand Yoff, Dakar</div>
+          </div>
+        </div>
+      </div>
+      <div class="testi-card reveal">
+        <div class="testi-stars">★★★★★</div>
+        <p class="quote">Simple à utiliser, même sans connexion rapide. Exactement ce qu'il manquait à Dem Dikk.</p>
+        <div class="testi-author">
+          <div class="testi-avatar">F</div>
+          <div>
+            <div class="name">Fatou S.</div>
+            <div class="role">Pikine, Dakar</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-final">
+  <div class="cta-box reveal">
+    <h2>Prêt à voir venir votre bus ?</h2>
+    <p>Téléchargez Dakar Move et changez votre façon de vous déplacer dans la ville.</p>
+    <div class="store-buttons">
+      <a href="#" class="store-btn">
+        <svg viewBox="0 0 24 24" fill="#1A1208"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.47-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35-.07 2.29.74 3.08.74.79 0 2.27-.91 3.84-.78 1.39.11 2.6.84 3.4 2.07-2.99 1.85-2.51 5.91.44 7.14-.6 1.39-1.39 2.78-1.76 3.8zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.41-2.2 4.4-3.74 4.25z"/></svg>
+        <span class="store-text"><small>Disponible sur</small><span>App Store</span></span>
+      </a>
+      <a href="#" class="store-btn">
+        <svg viewBox="0 0 24 24" fill="#1A1208"><path d="M3.6 2.6c-.3.3-.5.7-.5 1.2v16.4c0 .5.2.9.5 1.2l.1.1L13 12 3.7 2.5l-.1.1zM16.5 9.5L13.7 12l2.8 2.5 3.4-1.9c.5-.3.5-1.4 0-1.7l-3.4-1.9zM4.3 21l8-7.5-2.6-2.5-5.4 10z"/></svg>
+        <span class="store-text"><small>Disponible sur</small><span>Google Play</span></span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <div class="logo">
+        <svg viewBox="0 0 32 32" fill="none">
+          <circle cx="16" cy="16" r="15" stroke="#E8633A" stroke-width="2"/>
+          <path d="M9 20 L13 11 L16 17 L19 9 L23 20" stroke="#F4C95D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        Dakar Move
+      </div>
+      <p>Le suivi en temps réel des bus Dakar Dem Dikk, pour des trajets plus simples dans toute la ville.</p>
+    </div>
+    <div class="footer-col">
+      <h5>Application</h5>
+      <a href="#carte">Carte en direct</a>
+      <a href="#fonctionnalites">Fonctionnalités</a>
+      <a href="#lignes">Itinéraires</a>
+    </div>
+    <div class="footer-col">
+      <h5>Réseau</h5>
+      <a href="#">Arrêts Dem Dikk</a>
+      <a href="#">Zones couvertes</a>
+      <a href="#avis">Avis voyageurs</a>
+    </div>
+    <div class="footer-col">
+      <h5>Assistance</h5>
+      <a href="#">Centre d'aide</a>
+      <a href="#">Contact</a>
+      <a href="#">Confidentialité</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 Dakar Move. Application indépendante de suivi de transport.</span>
+    <span>Dakar, Sénégal</span>
+  </div>
+</footer>
+
+<script>
+  // Header scroll state
+  const header = document.getElementById('siteHeader');
+  window.addEventListener('scroll', () => {
+    header.classList.toggle('scrolled', window.scrollY > 30);
+  });
+
+  // Reveal on scroll
+  const reveals = document.querySelectorAll('.reveal');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        obs.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.15 });
+  reveals.forEach(el => obs.observe(el));
+</script>
+
+</body>
+</html>
