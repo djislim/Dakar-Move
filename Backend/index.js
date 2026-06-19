@@ -14,6 +14,7 @@ const favoritesRoutes = require('./src/routes/favorites.routes');
 
 // Import du socket
 const initBusSocket = require('./src/sockets/bus.socket');
+const { startCleanupSchedule } = require('./src/services/cleanup.service');
 
 const app = express();
 const server = http.createServer(app);
@@ -48,4 +49,5 @@ initBusSocket(io);
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🚌 Dakar Move backend lancé sur le port ${PORT}`);
+  startCleanupSchedule(30); // Nettoyage toutes les 30 minutes
 });
