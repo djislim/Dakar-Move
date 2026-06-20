@@ -30,19 +30,25 @@ const updateLocation = async (req, res) => {
       [trip_id, driver_id, latitude, longitude]
     );
 
+    // Récupérer le line_id du trip pour cibler la bonne room
+    const tripResult = await pool.query('SELECT line_id FROM trips WHERE id = $1', [trip_id]);
+    const line_id = tripResult.rows[0]?.line_id;
+
     // Détecter le retard à chaque mise à jour de position
     const delayInfo = await etaService.updateTripDelay(trip_id);
 
-    req.app.get('io').emit(`bus:${trip_id}`, {
-      trip_id, latitude, longitude, timestamp: new Date(),
+    // Émettre vers la room de la ligne (ce que les passagers écoutent)
+    req.app.get('io').to(`line:${line_id}`).emit('bus:position', {
+      trip_id, line_id, latitude, longitude, timestamp: new Date(),
       delay_minutes: delayInfo ? delayInfo.delay_minutes : 0,
       is_delayed: delayInfo ? delayInfo.is_delayed : false
     });
 
     // Si retard détecté, déclencher une alerte
     if (delayInfo && delayInfo.is_delayed) {
-      req.app.get('io').emit(`alert:trip:${trip_id}`, {
+      req.app.get('io').to(`line:${line_id}`).emit('alert:delay', {
         trip_id,
+        line_id,
         message: `Retard de ${delayInfo.delay_minutes} minutes détecté`,
         delay_minutes: delayInfo.delay_minutes,
         current_stop_id: delayInfo.current_stop_id
