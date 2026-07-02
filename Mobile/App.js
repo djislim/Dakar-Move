@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import HomeScreen from './src/screens/HomeScreen';
 import LineDetailScreen from './src/screens/LineDetailScreen';
 import MapScreen from './src/screens/MapScreen';
+import StopDetailScreen from './src/screens/StopDetailScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -21,6 +22,7 @@ export default function App() {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="LineDetail" component={LineDetailScreen} />
         <Stack.Screen name="Map" component={MapScreen} />
+        <Stack.Screen name="StopDetail" component={StopDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

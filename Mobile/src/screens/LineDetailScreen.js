@@ -18,7 +18,6 @@ export default function LineDetailScreen({ route, navigation }) {
 
   useEffect(() => {
     loadData();
-    // Rafraîchir les bus actifs toutes les 10 secondes
     const interval = setInterval(loadActiveBuses, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -45,13 +44,17 @@ export default function LineDetailScreen({ route, navigation }) {
   };
 
   const renderStop = ({ item, index }) => (
-    <View style={styles.stopRow}>
+    <TouchableOpacity
+      style={styles.stopRow}
+      onPress={() => navigation.navigate('StopDetail', { stop: item })}
+    >
       <View style={styles.stopTimeline}>
         <View style={styles.stopCircle} />
         {index < stops.length - 1 && <View style={styles.stopLine} />}
       </View>
       <Text style={styles.stopName}>{item.name}</Text>
-    </View>
+      <Text style={styles.stopArrow}>›</Text>
+    </TouchableOpacity>
   );
 
   if (loading) {
@@ -196,6 +199,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     paddingTop: 1,
+    paddingBottom: 14,
+    flex: 1,
+  },
+  stopArrow: {
+    color: '#888',
+    fontSize: 18,
     paddingBottom: 14,
   },
 });
