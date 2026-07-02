@@ -76,6 +76,13 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.subtitle}>Dakar — Zone urbaine</Text>
       </View>
 
+      <TouchableOpacity
+        style={styles.mapButton}
+        onPress={() => navigation.navigate('Map')}
+      >
+        <Text style={styles.mapButtonText}>🗺️ Voir la carte en direct</Text>
+      </TouchableOpacity>
+
       <Text style={styles.sectionTitle}>Lignes disponibles</Text>
 
       <FlatList
@@ -115,13 +122,24 @@ const styles = StyleSheet.create({
     color: '#90CAF9',
     marginTop: 2,
   },
+  mapButton: {
+    backgroundColor: '#1565C0',
+    margin: 12,
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  mapButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
   sectionTitle: {
     fontSize: 13,
     color: '#888',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     paddingHorizontal: 16,
-    paddingTop: 16,
     paddingBottom: 8,
   },
   list: {
